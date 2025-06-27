@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Vimeo Video with Questions</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #video-container {
+      position: relative;
+      width: 640px;
+      max-width: 100%;
+      margin-bottom: 24px;
+    }
+    .question-popup {
+      display: none;
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translate(-50%, -20%);
+      background: #fff;
+      border: 2px solid #3c3c3c;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      padding: 24px 32px;
+      z-index: 10;
+      text-align: center;
+      width: 80%;
+      max-width: 360px;
+    }
+    .likert-label {
+      background: #eee;
+      color: #333;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      cursor: pointer;
+      padding: 10px 18px;
+      margin: 6px 4px 0 4px;
+      font-size: 16px;
+      display: inline-block;
+      user-select: none;
+      transition: background 0.2s, color 0.2s;
+    }
+    .likert-label.selected {
+      background: #1976d2;
+      color: #fff;
+      border: 2px solid #1976d2;
+    }
+    .popup-buttons button {
+      margin: 8px 8px 0 8px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background: #1976d2;
+      color: #fff;
+      cursor: pointer;
+      padding: 10px 18px;
+      transition: background 0.2s;
+      display: inline-block;
+    }
+    .popup-buttons button:hover, .popup-buttons button.selected {
+      background: #1565c0;
+    }
+    #answer-message-q1, #answer-message-q2, #answer-message-q3 {
+      margin-top: 16px;
+      font-weight: bold;
+      color: #388e3c;
+    }
+  </style>
+</head>
+<body>
+  <h2>Interactive Vimeo Video Demo</h2>
+  <div id="video-container">
+    <!-- Vimeo embed -->
+    <iframe
+      id="vimeo-player"
+      src="https://player.vimeo.com/video/1096804867?api=1&background=0"
+      width="640"
+      height="360"
+      frameborder="0"
+      allow="autoplay; fullscreen"
+      allowfullscreen
+    ></iframe>
+    <!-- 1st Question Popup -->
+    <div class="question-popup" id="question1">
+      <div>
+        <strong>Was the video insightful so far?</strong>
+      </div>
+      <div id="likert-scale" style="margin:18px 0;">
+        <!-- Likert scale will be built by JS -->
+      </div>
+      <div>
+        <button id="submit-q1" style="margin-top:10px;">Submit</button>
+      </div>
+      <div id="answer-message-q1"></div>
+    </div>
+    <!-- 2nd Question Popup -->
+    <div class="question-popup" id="question2">
+      <div>
+        <strong>What’s more impactful?</strong>
+      </div>
+      <div class="popup-buttons" style="margin:18px 0;">
+        <button id="praise-btn" type="button">Praise</button>
+        <button id="promotion-btn" type="button">Promotion</button>
+      </div>
+      <div id="answer-message-q2"></div>
+    </div>
+    <!-- 3rd Question Popup -->
+    <div class="question-popup" id="question3">
+      <div>
+        <strong>Which do you prefer?</strong>
+      </div>
+      <div class="popup-buttons" style="margin:18px 0;">
+        <button id="certificate-btn" type="button">Certificate</button>
+        <button id="cash-btn" type="button">Cash</button>
+      </div>
+      <div id="answer-message-q3"></div>
+    </div>
+  </div>
+  <script src="https://player.vimeo.com/api/player.js"></script>
+  <script>
+    // Setup Vimeo Player
+    const iframe = document.getElementById('vimeo-player');
+    const player = new Vimeo.Player(iframe);
+
+    // Question timings in seconds
+    const questions = [
+      { id: 'question1', time: 180, shown: false },    // 3:00
+      { id: 'question2', time: 300, shown: false },    // 5:00
+      { id: 'question3', time: 525, shown: false }     // 8:45
+    ];
+
+    function showQuestion(id) {
+      document.getElementById(id).style.display = 'block';
+    }
+    function hideQuestion(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    // --- 1st Likert Question ---
+    let selectedLikert = null;
+    function buildLikertScale() {
+      const likert = document.getElementById('likert-scale');
+      likert.innerHTML = '';
+      selectedLikert = null;
+      for (let i = 1; i <= 5; i++) {
+        const label = document.createElement('span');
+        label.className = 'likert-label';
+        label.textContent = i;
+        label.dataset.value = i;
+        label.onclick = function() {
+          selectedLikert = i;
+          document.querySelectorAll('#likert-scale .likert-label').forEach(el => el.classList.remove('selected'));
+          label.classList.add('selected');
+        };
+        likert.appendChild(label);
+      }
+    }
+    document.getElementById('submit-q1').onclick = function() {
+      if(!selectedLikert) {
+        document.getElementById('answer-message-q1').textContent = "Please select a value!";
+        return;
+      }
+      document.getElementById('answer-message-q1').textContent = "Thank you! You rated: " + selectedLikert;
+      setTimeout(() => {
+        hideQuestion('question1');
+        player.play();
+      }, 1200);
+    };
+
+    // --- 2nd Question ---
+    function setupQ2() {
+      let selected = null;
+      ['praise-btn', 'promotion-btn'].forEach(id => {
+        document.getElementById(id).classList.remove('selected');
+      });
+      document.getElementById('answer-message-q2').textContent = '';
+      document.getElementById('praise-btn').onclick = function() {
+        selected = 'Praise';
+        document.getElementById('praise-btn').classList.add('selected');
+        document.getElementById('promotion-btn').classList.remove('selected');
+        submitQ2(selected);
+      };
+      document.getElementById('promotion-btn').onclick = function() {
+        selected = 'Promotion';
+        document.getElementById('promotion-btn').classList.add('selected');
+        document.getElementById('praise-btn').classList.remove('selected');
+        submitQ2(selected);
+      };
+    }
+    function submitQ2(selected) {
+      document.getElementById('answer-message-q2').textContent = "Thank you! You selected: " + selected;
+      setTimeout(() => {
+        hideQuestion('question2');
+        player.play();
+      }, 1200);
+    }
+
+    // --- 3rd Question ---
+    function setupQ3() {
+      let selected = null;
+      ['certificate-btn', 'cash-btn'].forEach(id => {
+        document.getElementById(id).classList.remove('selected');
+      });
+      document.getElementById('answer-message-q3').textContent = '';
+      document.getElementById('certificate-btn').onclick = function() {
+        selected = 'Certificate';
+        document.getElementById('certificate-btn').classList.add('selected');
+        document.getElementById('cash-btn').classList.remove('selected');
+        submitQ3(selected);
+      };
+      document.getElementById('cash-btn').onclick = function() {
+        selected = 'Cash';
+        document.getElementById('cash-btn').classList.add('selected');
+        document.getElementById('certificate-btn').classList.remove('selected');
+        submitQ3(selected);
+      };
+    }
+    function submitQ3(selected) {
+      document.getElementById('answer-message-q3').textContent = "Thank you! You selected: " + selected;
+      setTimeout(() => {
+        hideQuestion('question3');
+        player.play();
+      }, 1200);
+    }
+
+    // Show popups at the right time
+    player.on('timeupdate', function(event) {
+      questions.forEach(q => {
+        if (!q.shown && event.seconds >= q.time) {
+          player.pause();
+          if(q.id === 'question1') {
+            buildLikertScale();
+            document.getElementById('answer-message-q1').textContent = '';
+          }
+          if(q.id === 'question2') setupQ2();
+          if(q.id === 'question3') setupQ3();
+          showQuestion(q.id);
+          q.shown = true;
+        }
+      });
+    });
+
+    // Reset if user seeks back before a question
+    player.on('seeked', function(event) {
+      questions.forEach(q => {
+        if (event.seconds < q.time) q.shown = false;
+      });
+    });
+  </script>
+</body>
+</html>
